@@ -194,6 +194,7 @@ def gen_audio_segments(pipeline, text, voice, speed, stats=None, max_sentences=N
     nlp = spacy.load('xx_ent_wiki_sm')
     nlp.add_pipe('sentencizer')
     audio_segments = []
+    text, pipeline = fix_text(text, pipeline)
     doc = nlp(text)
     sentences = list(doc.sents)
     for i, sent in enumerate(sentences):
@@ -210,7 +211,28 @@ def gen_audio_segments(pipeline, text, voice, speed, stats=None, max_sentences=N
     return audio_segments
 
 
-def gen_text(text, voice='af_heart', output_file='text.wav', speed=1, play=False):
+def fix_text(text, pipe):
+    # we need to fix text AND pipeline to resolve unnecessary pauses and have more chars for replacement
+
+    # test like this and to add more fixes
+    # python -c 'import core as c; c.gen_text("hello Mr. Ms. daniel oniisan!", play = True)'
+
+    # text replacements, will get special characters wrong i.e. "chinese character japanese character japanese character"
+    audiofixes = {'Mr.': f"mister",
+                 'Mrs.': 'misiz',
+                 'Ms.': 'miz',
+                  }
+    for word, phoneme in audiofixes.items():
+        text = text.replace(word, phoneme)
+
+    # simple word-fixes,  does not remove dot-pauses
+    pipe.g2p.lexicon.golds["oniisan"] = "oniiːsan" # this
+    return text, pipe
+
+
+
+
+def gen_text(text, voice='af_sky', output_file='text.wav', speed=1, play=False):
     lang_code = voice[:1]
     pipeline = KPipeline(lang_code=lang_code)
     load_spacy()
